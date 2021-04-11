@@ -1,0 +1,11 @@
+Roles Teacher Student TA ;
+
+Users stefano alice bob ;
+
+UA <stefano,Teacher> <alice,TA> ;
+
+CR <Teacher,Student> <Teacher,TA> ;
+
+CA <Teacher,-Teacher&-TA,Student> <Teacher,-Student,TA> <Teacher,TA&-Student,Teacher> ;
+
+Goal Student ;
