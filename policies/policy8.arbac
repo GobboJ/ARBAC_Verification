@@ -1,0 +1,11 @@
+Roles Agent Doctor Employee Manager MedicalManager MedicalTeam Nurse Patient PatientWithTPC PrimaryDoctor Receptionist ReferredDoctor ThirdParty target Admin ;
+
+Users user0 user1 user2 user3 user4 user5 user6 user7 user8 user9 ;
+
+UA <user0,Admin> <user1,Doctor> <user2,Doctor> <user3,Nurse> <user4,Nurse> <user5,Doctor> <user5,PrimaryDoctor> <user6,Manager> <user7,Patient> <user8,Patient> <user9,Employee> <user9,Receptionist> ;
+
+CR <Doctor,ThirdParty> <Doctor,ReferredDoctor> <MedicalManager,MedicalTeam> <Manager,Employee> <Manager,MedicalManager> ;
+
+CA <Admin,Receptionist&PrimaryDoctor,target> <Doctor,TRUE,ThirdParty> <Manager,TRUE,Employee> <Manager,TRUE,MedicalManager> <Patient,TRUE,Agent> <Doctor,Doctor,ReferredDoctor> <MedicalManager,Doctor,MedicalTeam> <MedicalManager,Nurse,MedicalTeam> <Manager,-Doctor,Receptionist> <Manager,-Receptionist,Doctor> <Patient,Doctor&-Patient,PrimaryDoctor> <Receptionist,-PrimaryDoctor,Patient> <ThirdParty,Patient,PatientWithTPC> ;
+
+Goal target ;
