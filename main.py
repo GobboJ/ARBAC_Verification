@@ -6,23 +6,81 @@ import os
 import time
 
 
+def ur(user_assignments, user):
+    return set([r for (u, r) in user_assignments if u == user])
+
+
+def apply_can_assign(user_assignments, rule, user_target):
+    ur_target = ur(user_assignments, user_target)
+    if rule[0] in set([role for (user, role) in user_assignments]) and set(rule[1]).issubset(ur_target) and len(set(
+            rule[2]).intersection(ur_target)) == 0 and rule[3] not in ur_target:
+        return user_assignments + [(user_target, rule[3])]
+    else:
+        return user_assignments
+
+
+def apply_can_revoke(user_assignments, rule, user_target):
+    ur_target = ur(user_assignments, user_target)
+    if rule[0] in set([role for (user, role) in user_assignments]) and rule[1] in ur_target:
+        return [assignment for assignment in user_assignments if assignment != (user_target, rule[1])]
+    else:
+        return user_assignments
+
+
+def verify_reachability_rec(policy, visited):
+    roles, users, user_assignments, can_revoke, can_assign, goal = policy
+    if frozenset(user_assignments) in visited:
+        return visited, False
+    if goal in set([role for (user, role) in user_assignments]):
+        return visited, True
+    visited.add(frozenset(user_assignments))
+    for rule in can_assign:
+        for user in [user for (user, role) in user_assignments if role == rule[0]]:
+            for user_target in users:
+                user_assignments_new = apply_can_assign(user_assignments, rule, user_target)
+                if not set(user_assignments) == set(user_assignments_new):
+                    visited_new, result = verify_reachability_rec(
+                        (roles, users, user_assignments_new, can_revoke, can_assign, goal), visited)
+                    if result:
+                        return visited, True
+                    visited = visited_new
+    for rule in can_revoke:
+        for user in [user for (user, role) in user_assignments if role == rule[0]]:
+            for user_target in users:
+                user_assignments_new = apply_can_revoke(user_assignments, rule, user_target)
+                if not set(user_assignments) == set(user_assignments_new):
+                    visited_new, result = verify_reachability_rec(
+                        (roles, users, user_assignments_new, can_revoke, can_assign, goal), visited)
+                    if result:
+                        return visited, True
+                    visited = visited_new
+    return visited, False
+
+
+def verify_reachability(policy):
+    return verify_reachability_rec(policy, set())
+
+
 def backwards_slice(policy):
     roles, users, user_assignments, can_revoke, can_assign, goal = policy
     s_0 = {goal}
-    l = [rule[1] + rule[2] + [rule[0]] for rule in can_assign if rule[3] in s_0]
-    join = list(itertools.chain.from_iterable(l))
+    lst = [rule[1] + rule[2] + [rule[0]] for rule in can_assign if rule[3] in s_0]
+    join = list(itertools.chain.from_iterable(lst))
     s_i = s_0.union(set(join))
     while True:
-        l = [rule[1] + rule[2] + [rule[0]] for rule in can_assign if rule[3] in s_i]
-        join = list(itertools.chain.from_iterable(l))
+        lst = [rule[1] + rule[2] + [rule[0]] for rule in can_assign if rule[3] in s_i]
+        join = list(itertools.chain.from_iterable(lst))
         s_i_new = s_i.union(set(join))
         if s_i == s_i_new:  # Fixpoint S* found
             break
         else:
             s_i = s_i_new
     rs = set(roles).difference(s_i)  # R / S*
+    # Remove from CA all the rules that assign a role in R \ S∗
     can_assign_new = [rule for rule in can_assign if rule[3] not in rs]
+    # Remove from CR all the rules that revoke a role in R \ S∗
     can_revoke_new = [rule for rule in can_revoke if rule[1] not in rs]
+    # Delete the roles R \ S∗
     roles_new = [role for role in roles if role not in rs]
     return roles_new, users, user_assignments, can_revoke_new, can_assign_new, goal
 
@@ -97,22 +155,17 @@ def main():
             policy_data_new = backwards_slice(policy_data_new)
             if policy_data_new == policy_data:
                 break
+            else:
+                policy_data = policy_data_new
+        try:
+            _, result = verify_reachability(policy_data)
+            print("[!] " + policy + ": " + str(result))
+        except RecursionError as re:
+            print("[!] " + policy + ": " + 'Probably False, recursion limit hit')
+
     print("--- %s seconds ---" % (time.time() - start_time))
 
-
-# def main():
-#     policies = os.listdir("policies")
-#     for policy in policies:
-#         print("\n" + policy)
-#         policy_data = read('policies/' + policy)
-#         print("[!] Input Policy")
-#         print(policy_data)
-#         policy_data = forward_slice(policy_data)
-#         print("[!] Forward sliced Policy")
-#         print(policy_data)
-#         policy_data = backwards_slice(policy_data)
-#         print("[!] Backwards sliced Policy")
-#         print(policy_data)
+# 10110110
 
 
 if __name__ == '__main__':
